@@ -1,1 +1,35 @@
-<p>file-list works!</p>
+<mat-card>
+        <mat-card-title>Files</mat-card-title>
+
+
+        <input  type="file"  #uploadField  style="display: none"  (change)="onFilesAdded($event.target.files)"  multiple />
+        
+        <table mat-table [dataSource]="files">
+                <ng-container matColumnDef="name">
+                        <th mat-header-cell *matHeaderCellDef> Name </th>
+                        <td mat-cell *matCellDef="let file"> {{file.name}} </td>
+                </ng-container>
+                <ng-container matColumnDef="actions">
+                        <th mat-header-cell *matHeaderCellDef class="right">
+                                <button md-raised-button mat-icon-button (click)="addFiles()">
+                                        <mat-icon>save</mat-icon>
+                                </button>
+                        </th>
+                        <td mat-cell *matCellDef="let file" class="right">
+                                <button mat-icon-button (click)="download(file)">
+                                        <mat-icon>get_app</mat-icon>
+                                </button>
+                                <button mat-icon-button (click)="delete(file)">
+                                        <mat-icon>delete</mat-icon>
+                                </button>
+
+                        </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+        
+      
+</mat-card>
+

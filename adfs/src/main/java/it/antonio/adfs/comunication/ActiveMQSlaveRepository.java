@@ -1,11 +1,17 @@
 package it.antonio.adfs.comunication;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 
 import javax.jms.Destination;
 import javax.jms.Message;
@@ -18,11 +24,13 @@ import it.antonio.adfs.utils.ActiveMQConstants;
 
 public class ActiveMQSlaveRepository implements SlaveRepository {
 
-	private static final int SLAVES_MAX_SIZE = 50;
+	private static final int SLAVES_MAX_SIZE = 100;
+	private static final Duration SLAVES_MAX_WAIT = Duration.ofSeconds(30); // 30 seconds
 	
 	private ActiveMQSession session;
 	
-	private LinkedList<String> slaves = new LinkedList<String>(); 
+	private LinkedList<String> slavePings = new LinkedList<String>(); 
+	private Map<String, Date> slaveLastPing = new HashMap<>();
 	private ReadWriteLock lock = new ReentrantReadWriteLock(); 
 	
 	public ActiveMQSlaveRepository(ActiveMQSession session) {
@@ -47,9 +55,11 @@ public class ActiveMQSlaveRepository implements SlaveRepository {
 						lock.writeLock().lock();
 						String slave = message.getStringProperty("slave");
 						
-						slaves.add(slave);
-						if(slaves.size() > SLAVES_MAX_SIZE) {
-							slaves.removeFirst(); // remove oldes
+						slavePings.add(slave);
+						slaveLastPing.put(slave, new Date());
+						
+						if(slavePings.size() > SLAVES_MAX_SIZE) {
+							slavePings.removeFirst(); // remove oldes
 						}
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -73,10 +83,10 @@ public class ActiveMQSlaveRepository implements SlaveRepository {
 	public String randomSlave() {
 		try {
 			lock.readLock().lock();
-			if(slaves.isEmpty()) {
+			if(slavePings.isEmpty()) {
 				throw new IllegalArgumentException("No slave pinging");
 			}
-			return slaves.peekLast(); // recent
+			return slavePings.peekLast(); // recent
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
@@ -91,11 +101,12 @@ public class ActiveMQSlaveRepository implements SlaveRepository {
 	public List<String> slaves() {
 		try {
 			lock.readLock().lock();
-			if(slaves.isEmpty()) {
-				throw new IllegalArgumentException("No slave pinging");
-			}
-			Set<String> ret = new HashSet<String>();
-			slaves.forEach(ret::add);
+			
+			Set<String> ret = slaveLastPing.keySet().stream()
+					.filter(slave -> {
+						return slaveLastPing.get(slave).toInstant().isAfter(Instant.now().minus(SLAVES_MAX_WAIT) );
+					}).collect(Collectors.toSet());
+			
 			return new ArrayList<String>(ret); // recent
 		} catch (Exception e) {
 			e.printStackTrace();

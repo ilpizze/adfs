@@ -1,15 +1,19 @@
 package it.antonio.adfs.http;
 
+import static spark.Spark.before;
+import static spark.Spark.defaultResponseTransformer;
+import static spark.Spark.delete;
+import static spark.Spark.get;
+import static spark.Spark.options;
 import static spark.Spark.port;
 import static spark.Spark.post;
-import static spark.Spark.threadPool;
 import static spark.Spark.put;
+import static spark.Spark.threadPool;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -25,9 +29,6 @@ import it.antonio.adfs.comunication.MasterSync;
 import it.antonio.adfs.comunication.MasterWriter;
 import it.antonio.adfs.comunication.SlaveRepository;
 import it.antonio.adfs.store.StoreRegistry;
-
-import static spark.Spark.*;
-
 import spark.ResponseTransformer;
 import spark.utils.IOUtils;
 
@@ -82,18 +83,18 @@ public class HttpServer {
 			    storeRegistry.store(fileName);
 			    return "ok";
 			});
-			get("/files/sync/:slave", (request, response) -> {
+			get("/slaves/sync/:slave", (request, response) -> {
 				String slave = request.params("slave");
 				sync.sync(slave);
 				return "ok";
 			});
-			get("/files/slaves", (request, response) -> {
+			get("/slaves", (request, response) -> {
 				response.type("application/json");
 				List<String> slaves = slaveRepository.slaves();
 				return slaves;
 			});
 			
-			get("/files/list", (request, response) -> {
+			get("/files", (request, response) -> {
 				response.type("application/json");
 				return storeRegistry.files();
 			});
