@@ -37,13 +37,7 @@ public class ActiveMQSessionHolder {
 
 		session = (ActiveMQSession) connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
 		
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-
-			@Override
-			public void run() {
-				ActiveMQSessionHolder.this.stop();
-			}
-		});
+		
 	}
 	
 	public void stop() {
@@ -59,5 +53,7 @@ public class ActiveMQSessionHolder {
 	
 	public ActiveMQSession session() {
 		return session;
-	} 
+	}
+
+
 }

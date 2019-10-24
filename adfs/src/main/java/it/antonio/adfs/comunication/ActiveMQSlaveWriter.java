@@ -38,13 +38,23 @@ public class ActiveMQSlaveWriter implements SlaveWriter {
 						String type = message.getStringProperty("type");
 						
 						if(type.equals(ActiveMQConstants.REMOVE)) {
-							blobStore.remove(message.getStringProperty("key"));
+							//blobStore.remove(message.getStringProperty("key"));
+							String filename = message.getStringProperty("key");
+							blobStore.putWriteOperation(filename, blobStore.new RemoveDocument());
 							return;
 						} 
 						if(type.equals(ActiveMQConstants.INSERT)) {
 							BlobMessage blobMessage = (BlobMessage) message;
-							String key = blobMessage.getStringProperty("key");
-							blobStore.put(key, blobMessage.getInputStream());
+							String filename = blobMessage.getStringProperty("key");
+							//blobStore.put(key, blobMessage.getInputStream());
+							blobStore.putWriteOperation(filename, blobStore.new InsertDocument(blobMessage.getInputStream()));
+							return;
+						}
+						if(type.equals(ActiveMQConstants.APPEND)) {
+							BlobMessage blobMessage = (BlobMessage) message;
+							String filename = blobMessage.getStringProperty("key");
+							//blobStore.put(key, blobMessage.getInputStream());
+							blobStore.putWriteOperation(filename, blobStore.new UpdateDocument(blobMessage.getInputStream()));
 							return;
 						}
 						

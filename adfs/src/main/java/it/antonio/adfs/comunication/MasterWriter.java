@@ -10,5 +10,7 @@ public interface MasterWriter {
 	
 	void remove(String key);
 
+	void append(String fileName, InputStream is);
+
 	
 }

@@ -58,6 +58,18 @@ public class Slave {
 		MasterPinger pinger = new ActiveMQMasterPinger(slaveName, holder.session());
 		pinger.init();
 		
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			@Override
+			public void run() {
+				try {
+					holder.stop();
+					
+				} catch(Exception e) {
+					e.printStackTrace();
+				}
+				
+			}
+		});
 		while(true) Thread.sleep(100000);
 	}
 	

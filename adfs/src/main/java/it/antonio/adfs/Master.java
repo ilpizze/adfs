@@ -59,18 +59,6 @@ public class Master {
 		
 		broker.start();
 		
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-
-			@Override
-			public void run() {
-				try {
-					broker.stop();
-
-				} catch ( Exception e) {
-					throw new RuntimeException(e);
-				}
-			}
-		});
 		
 		ActiveMQCreds creds = new ActiveMQCreds(url, username, password, "MASTER");
 		
@@ -109,6 +97,23 @@ public class Master {
 		
 		FileServerCleaner fs = new FileServerCleaner(fileServer);
 		fs.init();
+		
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			@Override
+			public void run() {
+				try {
+					broker.stop();
+
+					server.close();
+					
+					holder.stop();
+					
+				} catch(Exception e) {
+					e.printStackTrace();
+				}
+				
+			}
+		});
 		
 		while(true) Thread.sleep(100000);
 		

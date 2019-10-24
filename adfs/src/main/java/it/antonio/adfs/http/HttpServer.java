@@ -4,6 +4,7 @@ import static spark.Spark.before;
 import static spark.Spark.defaultResponseTransformer;
 import static spark.Spark.delete;
 import static spark.Spark.get;
+import static spark.Spark.exception;
 import static spark.Spark.options;
 import static spark.Spark.port;
 import static spark.Spark.post;
@@ -30,6 +31,7 @@ import it.antonio.adfs.comunication.MasterWriter;
 import it.antonio.adfs.comunication.SlaveRepository;
 import it.antonio.adfs.store.StoreRegistry;
 import spark.ResponseTransformer;
+import spark.Spark;
 import spark.utils.IOUtils;
 
 public class HttpServer {
@@ -63,9 +65,39 @@ public class HttpServer {
 			threadPool(100);
 			defaultResponseTransformer(new DefaultResponseTransformer());
 			
+			exception(Exception.class, (exception, request, response) -> {
+				
+				exception.printStackTrace();
+				response.status(500);
+			});
+			
 			enableCORS("*", "GET,POST,PUT,DELETE,HEAD", "*");
 			
 			post("/files", (request, response) -> {
+				try {
+					request.attribute("org.eclipse.jetty.multipartConfig", new MultipartConfigElement("/tmp"));
+				    byte[] keyBytes = IOUtils.toByteArray(request.raw().getPart("key").getInputStream());
+				    String fileName = new String(keyBytes , StandardCharsets.UTF_8);
+				    
+				    try (InputStream is = request.raw().getPart("file").getInputStream()) {
+				    	try {
+				    		writer.save(fileName, is);
+				    	} catch(Exception e) {
+				    		e.printStackTrace();
+				    		throw e;
+				    	}
+				    }
+				    
+				    storeRegistry.store(fileName);
+				    return "ok";
+				} catch(Exception e) {
+					e.printStackTrace();
+					throw e;
+				}
+			    
+			    
+			});
+			put("/files", (request, response) -> {
 			    request.attribute("org.eclipse.jetty.multipartConfig", new MultipartConfigElement("/tmp"));
 			    byte[] keyBytes = IOUtils.toByteArray(request.raw().getPart("key").getInputStream());
 			    String fileName = new String(keyBytes , StandardCharsets.UTF_8);
@@ -73,7 +105,7 @@ public class HttpServer {
 			    
 			    try (InputStream is = request.raw().getPart("file").getInputStream()) {
 			    	try {
-			    		writer.save(fileName, is);
+			    		writer.append(fileName, is);
 			    	} catch(Exception e) {
 			    		e.printStackTrace();
 			    		throw e;
@@ -137,7 +169,7 @@ public class HttpServer {
 				
 				output.close();
 				input.close();
-			    return "ok";
+				return "ok";
 			});
 			get("/file-server/:id", (request, response) -> {
 				String id = request.params("id");
@@ -180,6 +212,11 @@ public class HttpServer {
 	        response.header("Access-Control-Allow-Headers", headers);
 	        
 	    });
+	}
+	
+	public void close() {
+		Spark.stop();
+		Spark.awaitStop();
 	}
 	
 	

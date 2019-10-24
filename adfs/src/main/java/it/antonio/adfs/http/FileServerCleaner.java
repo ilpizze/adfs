@@ -33,5 +33,7 @@ public class FileServerCleaner {
 			}
 		};
 		service.scheduleAtFixedRate(command , 0, 1, TimeUnit.MINUTES);
+		
+		
 	}
 }

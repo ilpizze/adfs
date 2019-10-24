@@ -45,8 +45,23 @@ public class ActiveMQMasterWriter implements MasterWriter{
 	@Override
 	public void save(String key, InputStream stream) {
 		try {
+			
 			Message message = session.createBlobMessage(stream);
-			message.setStringProperty("type", ActiveMQConstants.INSERT);
+			   message.setStringProperty("type", ActiveMQConstants.INSERT);
+			message.setStringProperty("key", key);
+			
+			modifications.send(message);
+		    
+		} catch (JMSException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	@Override
+	public void append(String key, InputStream stream) {
+		try {
+			Message message = session.createBlobMessage(stream);
+			message.setStringProperty("type", ActiveMQConstants.APPEND);
 			message.setStringProperty("key", key);
 			
 			modifications.send(message);
@@ -55,7 +70,7 @@ public class ActiveMQMasterWriter implements MasterWriter{
 			throw new RuntimeException(e);
 		}
 	}
-
+	
 	@Override
 	public void remove(String key) {
 		try {

@@ -79,7 +79,7 @@ public class ActiveMQSlaveSynch implements SlaveSync {
 						for (FileEntry f : files) {
 							
 							
-							store.putSyncOperation(store.new SyncRunnable() {
+							store.putSyncOperation(store.new SynchronizationRunnable() {
 								
 								@Override
 								public void run() {

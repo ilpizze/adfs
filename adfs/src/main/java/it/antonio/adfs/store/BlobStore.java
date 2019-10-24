@@ -6,17 +6,28 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class BlobStore {
 
 	private final File workingDirectory;
-
+	
+	// file system services
+	private ExecutorService fileSystemService = Executors.newFixedThreadPool(50);
+	private ConcurrentMap<String, Lock> fileLocks = new ConcurrentHashMap<>();
+	
+	// sync variables
 	private AtomicBoolean synching = new AtomicBoolean(); 
 	private ConcurrentLinkedQueue<Runnable> waitingToSynchOperations = new ConcurrentLinkedQueue<>(); 
 	private ConcurrentLinkedQueue<Runnable> syncOperations = new ConcurrentLinkedQueue<>(); 
@@ -37,47 +48,43 @@ public class BlobStore {
 		}
 	}
 
-	public void put(String key, InputStream supplier) {
-		try {
-			if(synching.get() == true) {
+
+
+	
+	
+	public void putWriteOperation(String file, WriteOperation op) {
+		
+		if(synching.get() == true) {
+			
+			waitingToSynchOperations.add(()-> putWriteOperation(file, op));
+			return;
+		}
+		
+		fileSystemService.execute(() -> {
+			Lock lock = fileLocks.computeIfAbsent(file, f-> new ReentrantLock(true));
+			lock.lock();
+			try {
+			
+				op.execute(file);
 				
-				waitingToSynchOperations.add(()-> put(key, supplier));
-				return;
+				
+			} catch (IOException e) {
+				e.printStackTrace();
+				throw new RuntimeException(e);
+			} finally {
+				lock.unlock();
 			}
 			
-			internalPut(key, supplier);
-			
-		} catch (IOException e) {
-			throw new IllegalStateException(e);
-		}
-	}
-
-	protected void internalPut(String key, InputStream supplier) throws IOException {
-
-		File temp = new File(workingDirectory, UUID.randomUUID().toString());
-		File file = new File(workingDirectory, key);
-		FileOutputStream fileOutputStream = new FileOutputStream(temp);
-		supplier.transferTo(fileOutputStream);
-		fileOutputStream.close();
-		
-		//final GZIPOutputStream gzipOutputStream = new GZIPOutputStream(fileOutputStream);
-		//supplier.transferTo(gzipOutputStream);
-		temp.renameTo(file);
-		
-		
+		});
 	}
 	
-	/**
-	 * Access a blob by key.
-	 *
-	 * @param key the blob key
-	 * @return the input stream to extract the blob data, or if there is no blob for
-	 *         the key
-	 * @see com.google.common.base.Optional
-	 */
-	public InputStream get(String key) {
+	
+	
+	
+	
+	public InputStream get(String file) {
 		try {
-			InputStream in = openBlobStream(key);
+			InputStream in = openBlobStream(file);
 			return in;
 		} catch (FileNotFoundException e) {
 			return null;
@@ -94,28 +101,14 @@ public class BlobStore {
 
 
 	
-	public void remove(String key) {
-		if(synching.get() == true) {
-			
-			waitingToSynchOperations.add(()-> remove(key));
-			return;
-		}
-		
-		File blob = new File(workingDirectory, key);
-		if (blob.exists()) {
-			if (!blob.delete()) {
-				throw new IllegalStateException("Could not delete " + blob);
-			}
-		}
-
-	}
+	
 
 	
 	public void startSync() {
 		synching.set(true);
 	}
 	
-	public void putSyncOperation(SyncRunnable runnable) {
+	public void putSyncOperation(SynchronizationRunnable runnable) {
 			syncOperations.add(runnable);
 			
 	}
@@ -154,14 +147,18 @@ public class BlobStore {
 	}
 	
 	
-	public abstract class SyncRunnable implements Runnable {
+	public abstract class SynchronizationRunnable implements Runnable {
 		
 		
 		
-		protected void putDuringSync(String key, InputStream stream) {
+		protected void putDuringSync(String fileName, InputStream stream) {
 				
 				try {
-					internalPut(key, stream);
+					File file = new File(workingDirectory, fileName);
+					FileOutputStream fileOutputStream = new FileOutputStream(file);
+					stream.transferTo(fileOutputStream);
+					fileOutputStream.close();
+					stream.close();
 					
 				} catch (Exception e) {
 					throw new IllegalStateException(e);
@@ -170,6 +167,106 @@ public class BlobStore {
 			
 			
 		}
+	}
+	
+	
+	public interface WriteOperation  {
+
+		void execute(String file) throws IOException;
+		
+	}
+	
+	public class InsertDocument implements WriteOperation {
+		
+		private InputStream stream;
+		
+		public InsertDocument(InputStream stream) {
+			super();
+			this.stream = stream;
+		}
+
+
+
+		@Override
+		public void execute(String fileName) throws IOException {
+				
+				
+				File temp = new File(workingDirectory, UUID.randomUUID().toString());
+				File file = new File(workingDirectory, fileName);
+				FileOutputStream fileOutputStream = new FileOutputStream(temp);
+				stream.transferTo(fileOutputStream);
+				fileOutputStream.close();
+				stream.close();
+				
+				//final GZIPOutputStream gzipOutputStream = new GZIPOutputStream(fileOutputStream);
+				//supplier.transferTo(gzipOutputStream);
+				temp.renameTo(file);
+
+				
+			
+		}
+		
+	}
+
+	public class UpdateDocument implements WriteOperation {
+		
+		private InputStream stream;
+		
+		public UpdateDocument(InputStream stream) {
+			super();
+			this.stream = stream;
+		}
+
+
+
+		@Override
+		public void execute(String fileName) throws IOException {
+				
+				
+				File temp = new File(workingDirectory, UUID.randomUUID().toString());
+				File file = new File(workingDirectory, fileName);
+				
+				FileInputStream fi = new FileInputStream(file);
+				Files.copy(fi, temp.toPath(), StandardCopyOption.REPLACE_EXISTING);
+				fi.close();
+				
+				
+				
+				
+				FileOutputStream fileOutputStream = new FileOutputStream(temp);
+				stream.transferTo(fileOutputStream);
+				fileOutputStream.close();
+				stream.close();
+				
+				
+				temp.renameTo(file);
+
+				
+			
+		}
+		
+	}
+
+	public class RemoveDocument implements WriteOperation {
+		
+		
+
+
+		@Override
+		public void execute(String fileName) {
+				
+				
+				File blob = new File(workingDirectory, fileName);
+				if (blob.exists()) {
+					if (!blob.delete()) {
+						throw new IllegalStateException("Could not delete " + blob);
+					}
+				}
+
+				
+			
+		}
+		
 	}
 	
 }

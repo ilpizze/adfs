@@ -8,7 +8,6 @@ import java.util.List;
 import org.mapdb.DB;
 import org.mapdb.DB.HashMapMaker;
 import org.mapdb.DBMaker;
-import org.mapdb.DBMaker.Maker;
 import org.mapdb.HTreeMap;
 import org.mapdb.Serializer;
 
@@ -19,7 +18,7 @@ import it.antonio.adfs.FileEntry;
 
 public class MapDBStoreRegistry implements StoreRegistry {
 
-	private Maker maker;
+	private DB db;
 	private Gson gson;
 	
 	public MapDBStoreRegistry(File file) {
@@ -27,16 +26,17 @@ public class MapDBStoreRegistry implements StoreRegistry {
 		
 		this.gson = new GsonBuilder().create();
 		
-		this.maker = DBMaker.fileDB(file)
-		 					.transactionEnable();
+		this.db = DBMaker.fileDB(file)
+							.closeOnJvmShutdown()
+		 					.transactionEnable()
+		 					.make();
 		 					
 	}
 
 	@Override
 	public void init() {
-		DB db = maker.make();
 		try {
-			entriesMap(db).createOrOpen();
+			entriesMap().createOrOpen();
 			
 			db.commit();
 				
@@ -44,18 +44,15 @@ public class MapDBStoreRegistry implements StoreRegistry {
 			
 			db.rollback();	
 			throw new RuntimeException(e);
-		} finally {
-			db.close();
-		}
+		} 
 		
 	}
 	
 	@Override
 	public void store(String fileName) {
-		DB db = maker.make();
 		try {
-			
-			HTreeMap<String, String> set = entriesMap(db).open();
+			System.out.println("INSERT");
+			HTreeMap<String, String> set = entriesMap().open();
 			
 			FileEntry entry = new FileEntry();
 			entry.setName(fileName);
@@ -65,21 +62,20 @@ public class MapDBStoreRegistry implements StoreRegistry {
 			
 			set.put(fileName, entryString);
 			db.commit();
+			System.out.println("COMMITTED");
+			
 		} catch(Exception e){
 			
 			db.rollback();	
 			throw new RuntimeException(e);
-		} finally {
-			db.close();
 		}
 	}
 
 	@Override
 	public void remove(String fileName) {
-		DB db = maker.make();
 		try {
 			
-			HTreeMap<String, String> map = entriesMap(db).open();
+			HTreeMap<String, String> map = entriesMap().open();
 		
 			map.remove(fileName);
 			db.commit();
@@ -88,18 +84,15 @@ public class MapDBStoreRegistry implements StoreRegistry {
 			
 			db.rollback();	
 			throw new RuntimeException(e);
-		} finally {
-			db.close();
-		}
+		} 
 	}
 
 	
 	@Override
 	public List<FileEntry> files() {
-		DB db = maker.make();
 		try {
 			
-			HTreeMap<String, String> map = entriesMap(db).open();
+			HTreeMap<String, String> map = entriesMap().open();
 			
 			List<FileEntry> files = new ArrayList<FileEntry>();
 			map.forEach((k,v) -> {
@@ -117,7 +110,7 @@ public class MapDBStoreRegistry implements StoreRegistry {
 		}
 	}
 	
-	private HashMapMaker<String, String> entriesMap(DB db){
+	private HashMapMaker<String, String> entriesMap(){
 		return db.hashMap("files").keySerializer(Serializer.STRING).valueSerializer(Serializer.STRING);
 	}
 }
