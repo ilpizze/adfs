@@ -12,6 +12,8 @@ public interface StoreRegistry {
 	void remove(String file);
 
 	List<FileEntry> files();
+
+	boolean contains(String filename);
 	
 	
 }

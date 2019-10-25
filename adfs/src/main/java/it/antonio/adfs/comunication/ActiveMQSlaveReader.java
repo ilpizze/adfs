@@ -53,17 +53,18 @@ public class ActiveMQSlaveReader implements SlaveReader{
 					
 					try {
 						String key = message.getStringProperty("key");
+						String requestId = message.getStringProperty("requestId");
 						InputStream stream = store.get(key);
 						
 						if(stream != null) {
 							BlobMessage blobMessage = session.createBlobMessage(stream);
-							blobMessage.setJMSCorrelationID(message.getJMSMessageID());
+							blobMessage.setStringProperty("requestId", requestId);
 							blobMessage.setBooleanProperty("empty", false);
 							masterProducer.send(blobMessage);
 							
 						} else {
 							Message emptyMessage = session.createMessage();
-							emptyMessage.setJMSCorrelationID(message.getJMSMessageID());
+							emptyMessage.setStringProperty("requestId", requestId);
 							emptyMessage.setBooleanProperty("empty", true);
 							masterProducer.send(emptyMessage);
 							

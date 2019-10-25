@@ -115,6 +115,7 @@ public class BlobStore {
 	
 	public void flushSyncOperations() {
 		try {
+			System.out.println("deleting " + workingDirectory);
 			for(File file: workingDirectory.listFiles()) {
 				file.delete();
 			}
@@ -127,6 +128,7 @@ public class BlobStore {
 			syncService.shutdown();
 			syncService.awaitTermination(24, TimeUnit.HOURS);
 			syncOperations.clear();
+			System.out.println("synched");
 			
 			
 			ExecutorService waitingSyncService = Executors.newSingleThreadExecutor();

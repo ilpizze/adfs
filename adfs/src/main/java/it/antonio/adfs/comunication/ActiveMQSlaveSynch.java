@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.jms.IllegalStateException;
 import javax.jms.JMSException;
@@ -61,7 +62,7 @@ public class ActiveMQSlaveSynch implements SlaveSync {
 						
 						store.startSync();
 						CloseableHttpClient client = HttpClients.createDefault();
-						HttpGet httpGet = new HttpGet(httpServerUrl + "/files/list");
+						HttpGet httpGet = new HttpGet(httpServerUrl + "/files");
 
 						CloseableHttpResponse response = client.execute(httpGet);
 						if (response.getStatusLine().getStatusCode() != 200) {
@@ -76,6 +77,8 @@ public class ActiveMQSlaveSynch implements SlaveSync {
 						List<FileEntry> files = gson.fromJson(new InputStreamReader(response.getEntity().getContent()),
 								listType);
 
+						System.out.println(files.stream().map(FileEntry::getName).collect(Collectors.joining(" " )));
+						
 						for (FileEntry f : files) {
 							
 							

@@ -51,7 +51,6 @@ public class MapDBStoreRegistry implements StoreRegistry {
 	@Override
 	public void store(String fileName) {
 		try {
-			System.out.println("INSERT");
 			HTreeMap<String, String> set = entriesMap().open();
 			
 			FileEntry entry = new FileEntry();
@@ -62,7 +61,6 @@ public class MapDBStoreRegistry implements StoreRegistry {
 			
 			set.put(fileName, entryString);
 			db.commit();
-			System.out.println("COMMITTED");
 			
 		} catch(Exception e){
 			
@@ -105,8 +103,22 @@ public class MapDBStoreRegistry implements StoreRegistry {
 		} catch(Exception e){
 			
 			throw new RuntimeException(e);
-		} finally {
-			db.close();
+		}
+	}
+	
+	@Override
+	public boolean contains(String filename) {
+		try {
+			
+			HTreeMap<String, String> map = entriesMap().open();
+			
+			
+			return map.containsKey(filename);
+			
+			
+		} catch(Exception e){
+			
+			throw new RuntimeException(e);
 		}
 	}
 	

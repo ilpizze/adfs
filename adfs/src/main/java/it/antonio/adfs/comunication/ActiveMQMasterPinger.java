@@ -3,6 +3,7 @@ package it.antonio.adfs.comunication;
 import javax.jms.Destination;
 import javax.jms.Message;
 import javax.jms.MessageProducer;
+import javax.jms.Queue;
 
 import org.apache.activemq.ActiveMQSession;
 
@@ -27,7 +28,10 @@ public class ActiveMQMasterPinger implements MasterPinger{
 			
 			
 			
-			Destination pingQueue = session.createQueue(ActiveMQConstants.PING_QUEUE);
+			Queue pingQueue = session.createQueue(ActiveMQConstants.PING_QUEUE);
+			
+			
+			
 			pingProducer = session.createProducer(pingQueue);
 
 			new Thread(() -> {

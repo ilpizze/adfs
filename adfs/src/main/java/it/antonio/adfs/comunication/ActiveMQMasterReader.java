@@ -3,6 +3,7 @@ package it.antonio.adfs.comunication;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -55,7 +56,7 @@ public class ActiveMQMasterReader implements MasterReader{
 					
 					try {
 						
-						String originalMessageId = message.getJMSCorrelationID(); 
+						String originalMessageId = message.getStringProperty("requestId"); 
 						
 						if(message.getBooleanProperty("empty") == false) {
 							BlobMessage blobMessage = (BlobMessage) message; 
@@ -87,45 +88,58 @@ public class ActiveMQMasterReader implements MasterReader{
 	
 
 	@Override
-	public InputStream read(String key) {
+	public InputStream read(String filename) {
 		try {
 			
-			String slave = slaveRepository.randomSlave();
 			
-			MessageProducer slaveProducer = producers.get(slave);
-			if(slaveProducer == null) {
-				synchronized (producers) {
-					Queue queue = session.createQueue("queue.master." + slave);
-					slaveProducer = session.createProducer(queue);
-					producers.put(slave, slaveProducer);
-				}
-			}
-			
-			
-			Message message = session.createMessage();
-			message.setStringProperty("key", key);
-			
-			slaveProducer.send(message);
-			
-			String messageId = message.getJMSMessageID();
-			
-			CountDownLatch latch = new CountDownLatch(1);
-			
-			cdl.put(messageId, latch);
-			latch.await(60, TimeUnit.SECONDS);
-			
-			InputStream stream = responses.get(messageId);
-			
-			if(stream instanceof NullInputStream) {
-				return null;
-			} else {
-				return stream;
-			}
-			
-		} catch (JMSException | InterruptedException e) {
+			return internalRead(filename, 10); // max tries = 10
+		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 		
+	}
+	
+	private InputStream internalRead(String key, int tryCount) throws Exception {
+		if(tryCount == 0) {
+			return null;
+		}
+		
+		String slave = slaveRepository.randomSlave();
+		
+		MessageProducer slaveProducer = producers.get(slave);
+		if(slaveProducer == null) {
+			synchronized (producers) {
+				Queue queue = session.createQueue("queue.master." + slave);
+				slaveProducer = session.createProducer(queue);
+				producers.put(slave, slaveProducer);
+			}
+		}
+		
+		
+		Message message = session.createMessage();
+		message.setStringProperty("key", key);
+		
+		String requestId = "request_" + UUID.randomUUID().toString();
+		message.setStringProperty("requestId", requestId);	
+		
+		CountDownLatch latch = new CountDownLatch(1);
+		cdl.put(requestId, latch);
+		
+		
+		slaveProducer.send(message);
+		
+		latch.await(120, TimeUnit.SECONDS);
+		
+		InputStream stream = responses.remove(requestId);
+		if(stream == null) {
+			throw new IllegalStateException();
+		}
+		
+		if(stream instanceof NullInputStream) {
+			return internalRead(key, tryCount - 1);
+		} else {
+			return stream;
+		}
 	}
 	
 	private static class NullInputStream extends InputStream{

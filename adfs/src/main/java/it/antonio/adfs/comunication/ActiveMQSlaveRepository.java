@@ -86,7 +86,11 @@ public class ActiveMQSlaveRepository implements SlaveRepository {
 			if(slavePings.isEmpty()) {
 				throw new IllegalArgumentException("No slave pinging");
 			}
-			return slavePings.peekLast(); // recent
+			int random = (int) (Math.random() * slavePings.size());
+			System.out.println("RANDOM " + random);
+			System.out.println("RANDOM " + slavePings.get(random));
+			
+			return slavePings.get(random); // recent
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
