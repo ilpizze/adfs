@@ -1,7 +1,6 @@
 package it.antonio.adfs;
 
 import java.io.File;
-import java.util.Random;
 
 import javax.jms.JMSException;
 
@@ -25,14 +24,18 @@ public class Slave {
 	
 	public static void main(String...args) throws InterruptedException, JMSException {
 		
-		Random random = new Random();
-		int num = random.nextInt(100000);
-		String slaveName = "SLAVE_" + num;
-		String httpServer = "http://localhost:22344/";
-		String url = "failover:tcp://localhost:22334";
+		
+		String masterName = getEnv("MASTER_URL");
+		Integer httpPort = Integer.valueOf(getEnv("MASTER_HTTP_PORT"));
+		String activemqPort = getEnv("MASTER_BUS_PORT");
+		String slaveName = getEnv("SLAVE_NAME");
+		String folder = getEnv("SLAVE_DIR");
+		String password =  getEnv("SECRET");
+		
+		
+		String httpServer = "http://"+ masterName + ":" + httpPort + "/";
+		String url = "failover:tcp://" + masterName + ":" + activemqPort;
 		String username = "fs_user";
-		String password = "fs_password";
-		String folder = "/run/media/antonio/disco2/adfs/f" + num;
 		
 		new File(folder).mkdirs();
 		
@@ -71,6 +74,16 @@ public class Slave {
 			}
 		});
 		while(true) Thread.sleep(100000);
+	}
+	
+	private static String getEnv(String key) {
+		String value = System.getenv(key);
+		
+		if(value != null) {
+			return value;
+		}
+		throw new IllegalArgumentException("Environment var not found: " + key);
+		
 	}
 	
 }

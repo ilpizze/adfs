@@ -28,20 +28,22 @@ import it.antonio.adfs.utils.ActiveMQSessionHolder;
 public class Master {
 
 	
-	
-	
+
 	
 	public static void main(String...args) throws Exception {
 		
-		int httpPort = 22344;
-		String httpServer = "http://localhost:22344/";
-		String brokerUrl = "tcp://localhost:22334";
+		Integer httpPort = Integer.valueOf(getEnv("HTTP_PORT"));
+		String activemqPort = getEnv("BUS_PORT");
+		String fileServerPath = getEnv("FILE_SERVER_DIR");
+		String masterPath = getEnv("MASTER_DIR");
+		String password =  getEnv("SECRET");
 		
-		String url = "failover:tcp://localhost:22334";
+		
+		//master always on localhost 
+		String httpServer = "http://localhost:"+httpPort+ "/";
+		String brokerUrl = "tcp://localhost:" + activemqPort;
+		String url = "failover:tcp://localhost:" + activemqPort;
 		String username = "fs_user";
-		String password = "fs_password";
-		String fileServerPath = "/run/media/antonio/disco2/adfs/fileServer";
-		String masterPath = "/run/media/antonio/disco2/adfs/master";
 		
 		
 		List<AuthenticationUser> users = new ArrayList<>();
@@ -116,6 +118,17 @@ public class Master {
 		});
 		
 		while(true) Thread.sleep(100000);
+		
+	}
+
+	
+	private static String getEnv(String key) {
+		String value = System.getenv(key);
+		
+		if(value != null) {
+			return value;
+		}
+		throw new IllegalArgumentException("Environment var not found: " + key);
 		
 	}
 	

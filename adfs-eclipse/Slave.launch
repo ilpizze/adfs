@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<launchConfiguration type="org.eclipse.jdt.launching.localJavaApplication">
+    <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">
+        <listEntry value="/adfs/src/main/java/it/antonio/adfs/Slave.java"/>
+    </listAttribute>
+    <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_TYPES">
+        <listEntry value="1"/>
+    </listAttribute>
+    <mapAttribute key="org.eclipse.debug.core.environmentVariables">
+        <mapEntry key="MASTER_BUS_PORT" value="22345"/>
+        <mapEntry key="MASTER_HTTP_PORT" value="22344"/>
+        <mapEntry key="MASTER_URL" value="localhost"/>
+        <mapEntry key="SECRET" value="password"/>
+        <mapEntry key="SLAVE_DIR" value="/run/media/antonio/disco2/adfs/slave1"/>
+        <mapEntry key="SLAVE_NAME" value="slave1"/>
+    </mapAttribute>
+    <booleanAttribute key="org.eclipse.jdt.launching.ATTR_EXCLUDE_TEST_CODE" value="true"/>
+    <booleanAttribute key="org.eclipse.jdt.launching.ATTR_USE_CLASSPATH_ONLY_JAR" value="false"/>
+    <stringAttribute key="org.eclipse.jdt.launching.CLASSPATH_PROVIDER" value="org.eclipse.m2e.launchconfig.classpathProvider"/>
+    <stringAttribute key="org.eclipse.jdt.launching.MAIN_TYPE" value="it.antonio.adfs.Slave"/>
+    <stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="adfs"/>
+    <stringAttribute key="org.eclipse.jdt.launching.SOURCE_PATH_PROVIDER" value="org.eclipse.m2e.launchconfig.sourcepathProvider"/>
+</launchConfiguration>

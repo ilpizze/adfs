@@ -1,0 +1,10 @@
+version: '3'
+services:
+   adfs-master:
+      container_name: adfs-master
+      image: adfs-master
+      build:
+         context: ../adfs
+         dockerfile: ../docker-assembly/cloud/Dockerfile-cloud-config-server
+      
+  

@@ -1,0 +1,4 @@
+from openjdk:11.0.4-jre-slim
+
+COPY target/nlp-server.jar /opt/cloud/nlp-server.jar
+ENTRYPOINT ["java", "-XshowSettings:vm", "-Xmx6g", "-jar","/opt/cloud/nlp-server.jar"]
